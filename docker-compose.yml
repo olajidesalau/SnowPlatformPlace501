@@ -1,0 +1,93 @@
+version: '3.9'
+
+services:
+  # SQL Server for database
+  mssql:
+    image: mcr.microsoft.com/mssql/server:latest
+    container_name: snowplatform-mssql
+    environment:
+      ACCEPT_EULA: 'Y'
+      SA_PASSWORD: 'YourPassword123!'
+      MSSQL_PID: 'Express'
+    ports:
+      - '1433:1433'
+    volumes:
+      - mssql_data:/var/opt/mssql
+      - ./migrations:/migrations:ro
+    networks:
+      - snowplatform-network
+    healthcheck:
+      test: [
+        'CMD',
+        '/opt/mssql-tools/bin/sqlcmd',
+        '-S',
+        'localhost',
+        '-U',
+        'SA',
+        '-P',
+        'YourPassword123!',
+        '-Q',
+        'SELECT 1'
+      ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Azurite (Azure Storage emulator)
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    container_name: snowplatform-azurite
+    ports:
+      - '10000:10000' # Blob
+      - '10001:10001' # Queue
+      - '10002:10002' # Table
+    volumes:
+      - azurite_data:/data
+    networks:
+      - snowplatform-network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:10000/']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: snowplatform-app
+    depends_on:
+      mssql:
+        condition: service_healthy
+      azurite:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: 'Server=mssql,1433;Database=snowplatformdata;User Id=SA;Password=YourPassword123!;Encrypt=False;TrustServerCertificate=False;'
+      STORAGE_ACCOUNT_NAME: devstoreaccount1
+      STORAGE_ACCOUNT_KEY: Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2uvTmjCoxbP1YQwLsEd4HS8q3j8oNcRvQWw==
+      STORAGE_ENDPOINT: http://azurite:10000/devstoreaccount1
+      JWT_SECRET: local-development-secret-key
+      ENVIRONMENT: development
+      LOG_LEVEL: debug
+    ports:
+      - '3000:3000'
+    networks:
+      - snowplatform-network
+    volumes:
+      - ./src:/app/src:ro
+      - ./public:/app/public:ro
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mssql_data:
+  azurite_data:
+
+networks:
+  snowplatform-network:
+    driver: bridge

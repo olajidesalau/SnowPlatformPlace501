@@ -1,0 +1,36 @@
+name: snowplatform
+metadata:
+  template: snowplatform@0.1.0
+services:
+  web:
+    project: .
+    language: ts
+    host: containerapp
+    docker:
+      path: ./Dockerfile
+      context: .
+      buildArgs:
+        NODE_ENV: production
+    port: 3000
+    env:
+      - name: DATABASE_URL
+        value: ${AZURE_SQL_CONNECTION_STRING}
+      - name: STORAGE_ACCOUNT_NAME
+        value: ${STORAGE_ACCOUNT_NAME}
+      - name: STORAGE_ACCOUNT_KEY
+        value: ${STORAGE_ACCOUNT_KEY}
+      - name: JWT_SECRET
+        value: ${JWT_SECRET}
+      - name: ENVIRONMENT
+        value: production
+      - name: NODE_ENV
+        value: production
+
+hooks:
+  postprovision:
+    - pwsh: ./scripts/setup-db.ps1
+
+resources:
+  infra:
+    path: ./infra
+    template: bicep

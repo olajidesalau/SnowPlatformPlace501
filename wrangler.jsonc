@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "snowplatform",
+  "main": "src/index.tsx",
+  "compatibility_date": "2026-01-18",
+  "pages_build_output_dir": "./dist",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      
+      "binding": "DB",
+      "database_name": "snowplatformdata101",
+      "database_id": "b424f388-e4d7-4fd0-a656-8a0fc230dcb5"
+    }
+  ]
+}
